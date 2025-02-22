@@ -118,17 +118,17 @@ let sock;
 let qrCodeData = '';
 let connectionStatus = 'Desconectado';
 
-// Rutas para servir las páginas HTML integradas como texto
+// Ruta para servir la página de inicio HTML
 app.get('/', (req, res) => {
     res.send(indexHtml);
 });
 
-// Ruta para servir la segunda página de estado
+// Ruta para servir la página de estado
 app.get('/estado', (req, res) => {
     res.send(statusHtml);
 });
 
-// Rutas para obtener el código QR y el estado
+// Ruta para obtener el código QR y el estado
 app.get('/qr', (req, res) => {
     res.send(qrCodeData);
 });
@@ -175,7 +175,6 @@ async function iniciarBot() {
     });
 
     sock.ev.on('creds.update', saveCreds);
-
     sock.ev.on('messages.upsert', async (msg) => {
         try {
             const mensaje = msg.messages[0];
@@ -185,7 +184,7 @@ async function iniciarBot() {
             const grupo = mensaje.key.remoteJid;
             const texto = mensaje.message.conversation || mensaje.message.extendedTextMessage?.text;
 
-            if (!texto) return; // Asegurarse de que texto no sea undefined
+            if (!texto) return;
 
             require('./commands/admin/fantasmas').monitorActividad(sock, mensaje);
 
@@ -193,21 +192,17 @@ async function iniciarBot() {
                 users[remitente] = { dulces: 0, xp: 0, nivel: 0, admin: false };
             }
 
-            // Verificar si el grupo está deshabilitado
             if (gruposDeshabilitados.includes(grupo)) {
-                // Obtener la lista de administradores del grupo
                 const groupMetadata = await sock.groupMetadata(grupo);
                 const admins = groupMetadata.participants
                     .filter(participant => participant.admin === 'admin' || participant.admin === 'superadmin')
                     .map(participant => participant.id);
 
-                // Verificar si el remitente es un administrador
                 if (!admins.includes(remitente)) {
                     return;
                 }
             }
 
-            // Cargar y ejecutar comandos
             const commandDirs = ['info', 'busquedas', 'juegos', 'rpg', 'stickers', 'admin', 'onoff', 'tops'];
             for (const dir of commandDirs) {
                 const commandFiles = fs.readdirSync(path.join(__dirname, 'commands', dir)).filter(file => file.endsWith('.js'));
@@ -220,27 +215,22 @@ async function iniciarBot() {
                 }
             }
 
-            // Verificar respuestas a acertijos
             const acertijosCommand = require('./commands/juegos/acertijos');
             await acertijosCommand.verificarRespuesta(sock, mensaje, users);
 
-            // Verificar respuestas a "ordena la palabra"
             const ordenaCommand = require('./commands/juegos/ordena');
             await ordenaCommand.verificarRespuesta(sock, mensaje, users);
 
-            // Verificar respuestas a películas
             const peliculasCommand = require('./commands/juegos/peliculas');
             await peliculasCommand.verificarRespuesta(sock, mensaje, users);
 
-            // Verificar respuestas a trivia
             const triviaCommand = require('./commands/juegos/trivia');
             await triviaCommand.verificarRespuesta(sock, mensaje, users);
 
-            // Verificar respuestas al juego de apostar
             const apostarCommand = require('./commands/juegos/apostar');
             await apostarCommand.verificarRespuesta(sock, mensaje, users);
 
-            writeUsers(users); // Guardar los datos de los usuarios después de procesar los mensajes
+            writeUsers(users); // Guardar los datos de los usuarios
         } catch (error) {
             console.error('Error procesando mensaje:', error);
         }
@@ -250,7 +240,7 @@ async function iniciarBot() {
 // Iniciar el bot
 iniciarBot();
 
-// Iniciar el servidor en el puerto proporcionado por Render o 3000 de manera predeterminada
+// Iniciar el servidor en el puerto especificado
 app.listen(port, () => {
     console.log(`Servidor web iniciado en http://localhost:${port}`);
 });
